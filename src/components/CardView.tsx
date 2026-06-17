@@ -13,7 +13,7 @@ export function CardView({ card, hidden = false, compact = false }: CardViewProp
     return (
       <div
         className={`relative grid shrink-0 place-items-center overflow-hidden rounded-xl border border-red-300/25 bg-[#120506] shadow-card ${
-          compact ? "h-20 w-14" : "h-28 w-20"
+          compact ? "h-20 w-14" : "h-32 w-24"
         }`}
         aria-label="Hidden card"
       >
@@ -36,8 +36,8 @@ export function CardView({ card, hidden = false, compact = false }: CardViewProp
 
   return (
     <div
-      className={`relative shrink-0 rounded-xl border border-white/70 bg-amber-50 p-2 text-slate-950 shadow-card ${
-        compact ? "h-20 w-14" : "h-28 w-20"
+      className={`relative shrink-0 rounded-2xl border border-white/80 bg-amber-50 p-2 text-slate-950 shadow-card transition-transform duration-200 active:scale-95 ${
+        compact ? "h-20 w-14" : "h-32 w-24"
       }`}
       aria-label={`${card.rank} of ${card.suit}`}
     >

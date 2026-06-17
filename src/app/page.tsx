@@ -26,7 +26,7 @@ import { getRandomUpgradeChoices, hasUpgrade, Upgrade, UpgradeId } from "@/lib/u
 
 type Screen = "start" | "game" | "upgrade" | "game-over";
 
-const startingHearts = 3;
+const startingHearts = 5;
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("start");
@@ -48,10 +48,11 @@ export default function Home() {
     ? roundState.splitHands[roundState.activeSplitHandIndex]
     : roundState?.playerHand;
   const canDoubleDown = Boolean(
-    canAct && activePlayerHand?.length === 2 && !roundState?.lastHitCard,
+    canAct && hearts >= 2 && activePlayerHand?.length === 2 && !roundState?.lastHitCard,
   );
   const canSplit = Boolean(
     canAct &&
+      hearts >= 2 &&
       !roundState?.splitHands &&
       roundState?.playerHand.length === 2 &&
       !roundState.lastHitCard &&
@@ -108,14 +109,13 @@ export default function Home() {
     setCopied(false);
   }
 
-  function continueAfterLoss(nextHearts: number) {
+  function retryCurrentRound(nextHearts: number) {
     if (nextHearts <= 0) {
       setBestScore((best) => Math.max(best, score));
       setScreen("game-over");
       return;
     }
 
-    setRound((currentRound) => currentRound + 1);
     setRoundState(startNewRound(upgrades));
     setLastResolution(null);
   }
@@ -133,6 +133,10 @@ export default function Home() {
       upgrades,
       playerValueOverride,
       doubledDown,
+      {
+        currentHearts: hearts,
+        maxHearts: startingHearts,
+      },
     );
     const nextScore = score + resolution.scoreAwarded;
     const nextHearts = Math.max(0, hearts - resolution.lostHearts);
@@ -165,7 +169,7 @@ export default function Home() {
     }
 
     setHearts(nextHearts);
-    window.setTimeout(() => continueAfterLoss(nextHearts), 1100);
+    window.setTimeout(() => retryCurrentRound(nextHearts), 1100);
   }
 
   function finishSplitRound(
@@ -180,6 +184,11 @@ export default function Home() {
         upgrades,
         splitResult.playerValueOverride,
         splitResult.doubledDown,
+        {
+          currentHearts: hearts,
+          maxHearts: startingHearts,
+          isSplitHand: true,
+        },
       ),
     );
     const scoreAwarded = resolutions.reduce(
@@ -244,7 +253,7 @@ export default function Home() {
       return;
     }
 
-    window.setTimeout(() => continueAfterLoss(nextHearts), 1100);
+    window.setTimeout(() => retryCurrentRound(nextHearts), 1100);
   }
 
   function completeActiveSplitHand(
@@ -511,16 +520,18 @@ export default function Home() {
   if (screen === "upgrade") {
     return (
       <main className="table-felt min-h-dvh px-4 py-6">
-        <div className="mx-auto w-full max-w-md">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-red-300">
-            Round won
-          </p>
-          <h1 className="mt-2 text-4xl font-black leading-tight text-amber-50">
-            Pick your poison.
-          </h1>
-          <p className="mt-2 text-sm font-semibold leading-6 text-amber-50/75">
-            One upgrade joins the run. The dealer gets no vote.
-          </p>
+        <div className="enter-pop mx-auto w-full max-w-md">
+          <section className="game-panel rounded-[1.6rem] p-5">
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-red-300">
+              Round won
+            </p>
+            <h1 className="mt-2 text-4xl font-black leading-tight text-amber-50">
+              Pick your poison.
+            </h1>
+            <p className="mt-2 text-sm font-semibold leading-6 text-amber-50/75">
+              One upgrade joins the run. The dealer gets no vote.
+            </p>
+          </section>
           <div className="mt-5 grid gap-4">
             {upgradeChoices.map((upgrade) => (
               <UpgradeCard
@@ -540,21 +551,24 @@ export default function Home() {
   }
 
   return (
-    <main className="table-felt min-h-dvh px-4 pb-6">
+    <main className="table-felt min-h-dvh px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
       <div className="mx-auto grid w-full max-w-md gap-4">
         <GameHUD
           hearts={hearts}
+          maxHearts={startingHearts}
           round={round}
           score={score}
           bestScore={bestScore}
           upgrades={upgrades}
         />
 
-        <div className="mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 p-3 text-sm font-bold text-amber-50/80 shadow-card">
+        <div className="game-panel mt-1 flex items-center justify-between rounded-[1.25rem] p-3 text-sm font-bold text-amber-50/80">
           <span>
             {lastResolution?.note ??
               (roundState.doubleGhostActive
                 ? "Double Ghost is live. Win big or bleed harder."
+                : hearts < 2
+                  ? "Low on hearts. Double Down and Split are locked."
                 : canDoubleDown
                   ? "Double Down is open: one card, no retreat, double risk."
                   : canSplit
@@ -564,7 +578,7 @@ export default function Home() {
         </div>
 
         {hasUpgrade(upgrades, "peek") && roundState.deck[0] ? (
-          <section className="flex items-center justify-between rounded-2xl border border-amber-200/20 bg-amber-200/10 p-3">
+          <section className="game-panel flex items-center justify-between rounded-[1.25rem] p-3">
             <div>
               <div className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-100/70">
                 Peek
@@ -609,7 +623,7 @@ export default function Home() {
           />
         )}
 
-        <div className="rounded-2xl border border-white/10 bg-black/18 p-3 shadow-card">
+        <div className="game-panel sticky bottom-3 z-20 rounded-[1.5rem] p-3">
           <div className="mb-3 flex items-center justify-between text-sm font-bold text-amber-50/75">
             <span>Hand value</span>
             <span className={playerValue?.isBust ? "text-red-300" : "text-amber-200"}>
@@ -632,7 +646,7 @@ export default function Home() {
         </div>
 
         {upgrades.length > 0 ? (
-          <section className="rounded-2xl border border-white/10 bg-black/18 p-3">
+          <section className="game-panel rounded-[1.25rem] p-3">
             <h2 className="text-xs font-black uppercase tracking-[0.16em] text-amber-100/70">
               Upgrades
             </h2>

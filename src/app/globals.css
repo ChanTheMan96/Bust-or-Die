@@ -33,3 +33,36 @@ button {
 .table-felt {
   background: #000;
 }
+
+.game-panel {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025)),
+    rgba(10, 10, 10, 0.88);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 16px 36px rgba(0, 0, 0, 0.46);
+  backdrop-filter: blur(16px);
+}
+
+.game-button {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 14px 24px rgba(0, 0, 0, 0.4);
+}
+
+.enter-pop {
+  animation: enter-pop 260ms ease-out both;
+}
+
+@keyframes enter-pop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

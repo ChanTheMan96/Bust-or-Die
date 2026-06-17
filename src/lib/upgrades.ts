@@ -6,7 +6,17 @@ export type UpgradeId =
   | "peek"
   | "burn-card"
   | "double-ghost"
-  | "ace-magnet";
+  | "ace-magnet"
+  | "perfect-20"
+  | "underdog-18"
+  | "dealer-tax"
+  | "blackjack-bounty"
+  | "red-seven-rite"
+  | "grave-bloom"
+  | "safe-push"
+  | "split-spark"
+  | "double-edge"
+  | "long-hand";
 
 export type Upgrade = {
   id: UpgradeId;
@@ -54,6 +64,56 @@ export const upgrades: Upgrade[] = [
     id: "ace-magnet",
     name: "Ace Magnet",
     description: "Add one temporary extra Ace to each new round deck.",
+  },
+  {
+    id: "perfect-20",
+    name: "Perfect 20",
+    description: "Winning with exactly 20 grants +40 score.",
+  },
+  {
+    id: "underdog-18",
+    name: "Underdog 18",
+    description: "Winning with 18 or less grants +60 score.",
+  },
+  {
+    id: "dealer-tax",
+    name: "Dealer Tax",
+    description: "If the dealer lands on exactly 17 and you win, gain +35 score.",
+  },
+  {
+    id: "blackjack-bounty",
+    name: "Blackjack Bounty",
+    description: "Your blackjack bonus becomes +75 instead of +25.",
+  },
+  {
+    id: "red-seven-rite",
+    name: "Red Seven Rite",
+    description: "Winning with a red 7 in hand grants +35 score.",
+  },
+  {
+    id: "grave-bloom",
+    name: "Grave Bloom",
+    description: "Wins grant +15 score for each missing heart.",
+  },
+  {
+    id: "safe-push",
+    name: "Safe Push",
+    description: "Tied hands grant +25 score instead of nothing.",
+  },
+  {
+    id: "split-spark",
+    name: "Split Spark",
+    description: "Each winning split hand grants +30 score.",
+  },
+  {
+    id: "double-edge",
+    name: "Double Edge",
+    description: "Winning after Double Down grants +50 extra score.",
+  },
+  {
+    id: "long-hand",
+    name: "Long Hand",
+    description: "Winning with 5 or more cards grants +50 score.",
   },
 ];
 

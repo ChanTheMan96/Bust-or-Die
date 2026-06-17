@@ -25,6 +25,12 @@ export type SplitHandResult = {
   doubledDown: boolean;
 };
 
+export type ResolveRoundOptions = {
+  currentHearts: number;
+  maxHearts: number;
+  isSplitHand?: boolean;
+};
+
 export type RoundState = {
   deck: PlayingCard[];
   dealerHand: PlayingCard[];
@@ -101,6 +107,11 @@ export function resolveRound(
   upgrades: UpgradeId[],
   playerValueOverride: number | null = null,
   doubledDown = false,
+  options: ResolveRoundOptions = {
+    currentHearts: 5,
+    maxHearts: 5,
+    isSplitHand: false,
+  },
 ): RoundResolution {
   const luckySeven = hasUpgrade(upgrades, "lucky-7");
   const calculatedPlayerValue = calculateBestHandValue(playerHand, luckySeven);
@@ -139,10 +150,38 @@ export function resolveRound(
     result === "dealer-win"
       ? 1 + (doubleGhost ? 1 : 0) + (doubledDown ? 1 : 0)
       : 0;
+  const hasRedSeven = playerHand.some(
+    (card) =>
+      card.rank === "7" && (card.suit === "hearts" || card.suit === "diamonds"),
+  );
+  const missingHearts = Math.max(options.maxHearts - options.currentHearts, 0);
+  const blackjackBonus = playerBlackjack
+    ? hasUpgrade(upgrades, "blackjack-bounty")
+      ? 75
+      : 25
+    : 0;
+  const winBonuses =
+    result === "player-win"
+      ? [
+          100,
+          blackjackBonus,
+          dealerBusted ? 10 : 0,
+          hasUpgrade(upgrades, "perfect-20") && playerValue.best === 20 ? 40 : 0,
+          hasUpgrade(upgrades, "underdog-18") && playerValue.best <= 18 ? 60 : 0,
+          hasUpgrade(upgrades, "dealer-tax") && dealerValue.best === 17 ? 35 : 0,
+          hasUpgrade(upgrades, "red-seven-rite") && hasRedSeven ? 35 : 0,
+          hasUpgrade(upgrades, "grave-bloom") ? missingHearts * 15 : 0,
+          hasUpgrade(upgrades, "split-spark") && options.isSplitHand ? 30 : 0,
+          hasUpgrade(upgrades, "double-edge") && doubledDown ? 50 : 0,
+          hasUpgrade(upgrades, "long-hand") && playerHand.length >= 5 ? 50 : 0,
+        ]
+      : [];
+  const pushScore =
+    result === "push" && hasUpgrade(upgrades, "safe-push") ? 25 : 0;
   const baseScore =
     result === "player-win"
-      ? 100 + (playerBlackjack ? 25 : 0) + (dealerBusted ? 10 : 0)
-      : 0;
+      ? winBonuses.reduce((total, bonus) => total + bonus, 0)
+      : pushScore;
 
   const modifierNotes = [
     doubleGhost && result === "player-win" ? "Double Ghost doubles the score." : "",
@@ -151,6 +190,9 @@ export function resolveRound(
       : "",
     doubledDown && result === "player-win" ? "Double Down doubles the score." : "",
     doubledDown && result === "dealer-win" ? "Double Down costs an extra heart." : "",
+    hasUpgrade(upgrades, "safe-push") && result === "push"
+      ? "Safe Push grants score."
+      : "",
   ].filter(Boolean);
 
   return {

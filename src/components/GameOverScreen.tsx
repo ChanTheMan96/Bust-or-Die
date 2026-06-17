@@ -19,7 +19,10 @@ export function GameOverScreen({
 }: GameOverScreenProps) {
   return (
     <main className="table-felt flex min-h-dvh items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md rounded-3xl border border-red-200/12 bg-black/45 p-5 text-center shadow-card backdrop-blur">
+      <div className="game-panel enter-pop w-full max-w-md rounded-[2rem] p-5 text-center">
+        <div className="mx-auto grid h-16 w-16 place-items-center rounded-3xl border border-red-200/20 bg-red-950/70 text-4xl shadow-glow">
+          ☠
+        </div>
         <p className="text-xs font-black uppercase tracking-[0.24em] text-red-300">
           Run Over
         </p>
@@ -51,13 +54,13 @@ export function GameOverScreen({
         </div>
         <div className="mt-6 grid gap-3">
           <button
-            className="min-h-14 rounded-2xl bg-red-600 px-4 py-3 text-lg font-black text-white shadow-glow transition active:scale-[0.98]"
+            className="game-button min-h-14 rounded-[1.25rem] bg-red-600 px-4 py-3 text-lg font-black text-white shadow-glow transition active:scale-[0.97]"
             onClick={onRestart}
           >
             Restart
           </button>
           <button
-            className="min-h-12 rounded-xl border border-red-200/15 bg-black/28 px-4 py-3 text-sm font-black text-white transition active:scale-[0.98]"
+            className="min-h-12 rounded-[1rem] border border-red-200/15 bg-black/28 px-4 py-3 text-sm font-black text-white transition active:scale-[0.97]"
             onClick={onShare}
           >
             {copied ? "Copied" : "Share Text"}
