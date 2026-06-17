@@ -29,6 +29,7 @@ export type ResolveRoundOptions = {
   currentHearts: number;
   maxHearts: number;
   isSplitHand?: boolean;
+  forcePlayerWin?: boolean;
 };
 
 export type RoundState = {
@@ -111,6 +112,7 @@ export function resolveRound(
     currentHearts: 5,
     maxHearts: 5,
     isSplitHand: false,
+    forcePlayerWin: false,
   },
 ): RoundResolution {
   const luckySeven = hasUpgrade(upgrades, "lucky-7");
@@ -130,7 +132,10 @@ export function resolveRound(
   let result: RoundResult = "push";
   let note = "You tied the dealer. No heart lost, no glory gained.";
 
-  if (playerValue.isBust) {
+  if (options.forcePlayerWin) {
+    result = "player-win";
+    note = "Blackjack. Clean hit, clean kill.";
+  } else if (playerValue.isBust) {
     result = "dealer-win";
     note = "You busted. The table bites back.";
   } else if (dealerBusted) {

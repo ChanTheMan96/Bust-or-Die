@@ -12,12 +12,12 @@ import {
   calculateBestHandValue,
   cardBaseValue,
   drawCard,
+  isBlackjack,
   PlayingCard,
 } from "@/lib/cards";
 import {
   drawForDealer,
   resolveRound,
-  RoundResolution,
   RoundState,
   SplitHandResult,
   startNewRound,
@@ -36,11 +36,11 @@ export default function Home() {
   const [bestScore, setBestScore] = useState(0);
   const [upgrades, setUpgrades] = useState<UpgradeId[]>([]);
   const [roundState, setRoundState] = useState<RoundState | null>(null);
-  const [lastResolution, setLastResolution] = useState<RoundResolution | null>(null);
   const [upgradeChoices, setUpgradeChoices] = useState<Upgrade[]>([]);
   const [softShieldUsed, setSoftShieldUsed] = useState(false);
   const [roundsSurvived, setRoundsSurvived] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [celebration, setCelebration] = useState<string | null>(null);
 
   const luckySeven = hasUpgrade(upgrades, "lucky-7");
   const canAct = Boolean(roundState && !roundState.stood && !roundState.resolved);
@@ -102,22 +102,36 @@ export default function Home() {
     setScore(0);
     setUpgrades([]);
     setRoundState(firstRound);
-    setLastResolution(null);
     setUpgradeChoices([]);
     setSoftShieldUsed(false);
     setRoundsSurvived(0);
     setCopied(false);
+    setCelebration(null);
+
+    if (isBlackjack(firstRound.playerHand, false)) {
+      setCelebration("Blackjack!");
+      window.setTimeout(() => {
+        finishNaturalBlackjack(firstRound, [], startingHearts, 0);
+      }, 800);
+    }
   }
 
-  function retryCurrentRound(nextHearts: number) {
+  function retryCurrentRound(nextHearts: number, currentScore = score) {
     if (nextHearts <= 0) {
       setBestScore((best) => Math.max(best, score));
       setScreen("game-over");
       return;
     }
 
-    setRoundState(startNewRound(upgrades));
-    setLastResolution(null);
+    const nextRound = startNewRound(upgrades);
+    setRoundState(nextRound);
+
+    if (isBlackjack(nextRound.playerHand, hasUpgrade(upgrades, "lucky-7"))) {
+      setCelebration("Blackjack!");
+      window.setTimeout(() => {
+        finishNaturalBlackjack(nextRound, upgrades, nextHearts, currentScore);
+      }, 800);
+    }
   }
 
   function finishRound(
@@ -155,7 +169,6 @@ export default function Home() {
           }
         : state,
     );
-    setLastResolution(resolution);
     setScore(nextScore);
     setBestScore((best) => Math.max(best, nextScore));
 
@@ -163,13 +176,14 @@ export default function Home() {
       setRoundsSurvived((survived) => survived + 1);
       window.setTimeout(() => {
         setUpgradeChoices(getRandomUpgradeChoices(upgrades));
+        setCelebration(null);
         setScreen("upgrade");
       }, 900);
       return;
     }
 
     setHearts(nextHearts);
-    window.setTimeout(() => retryCurrentRound(nextHearts), 1100);
+    window.setTimeout(() => retryCurrentRound(nextHearts, nextScore), 1100);
   }
 
   function finishSplitRound(
@@ -202,14 +216,8 @@ export default function Home() {
     const wins = resolutions.filter(
       (resolution) => resolution.result === "player-win",
     ).length;
-    const losses = resolutions.filter(
-      (resolution) => resolution.result === "dealer-win",
-    ).length;
-    const pushes = resolutions.length - wins - losses;
     const nextScore = score + scoreAwarded;
     const nextHearts = Math.max(0, hearts - lostHearts);
-    const aggregateResult =
-      wins > 0 ? "player-win" : losses > 0 ? "dealer-win" : "push";
 
     setRoundState((state) =>
       state
@@ -227,14 +235,6 @@ export default function Home() {
           }
         : state,
     );
-    setLastResolution({
-      result: aggregateResult,
-      scoreAwarded,
-      lostHearts,
-      dealerBusted: resolutions.some((resolution) => resolution.dealerBusted),
-      playerBlackjack: resolutions.some((resolution) => resolution.playerBlackjack),
-      note: `Split resolved: ${wins} won, ${losses} lost, ${pushes} pushed.`,
-    });
     setScore(nextScore);
     setBestScore((best) => Math.max(best, nextScore));
     setHearts(nextHearts);
@@ -248,12 +248,13 @@ export default function Home() {
       setRoundsSurvived((survived) => survived + 1);
       window.setTimeout(() => {
         setUpgradeChoices(getRandomUpgradeChoices(upgrades));
+        setCelebration(null);
         setScreen("upgrade");
       }, 1100);
       return;
     }
 
-    window.setTimeout(() => retryCurrentRound(nextHearts), 1100);
+    window.setTimeout(() => retryCurrentRound(nextHearts, nextScore), 1100);
   }
 
   function completeActiveSplitHand(
@@ -291,14 +292,6 @@ export default function Home() {
         completedSplitHands: nextCompletedSplitHands,
         playerValueOverride: null,
         lastHitCard: null,
-      });
-      setLastResolution({
-        result: "push",
-        scoreAwarded: 0,
-        lostHearts: 0,
-        dealerBusted: false,
-        playerBlackjack: false,
-        note: "First split hand locked. Play the second hand.",
       });
       return;
     }
@@ -435,14 +428,6 @@ export default function Home() {
       playerValueOverride: null,
       lastHitCard: null,
     });
-    setLastResolution({
-      result: "push",
-      scoreAwarded: 0,
-      lostHearts: 0,
-      dealerBusted: false,
-      playerBlackjack: false,
-      note: "Split opened. Play hand 1, then hand 2.",
-    });
   }
 
   function undo() {
@@ -484,9 +469,56 @@ export default function Home() {
 
     setUpgrades(nextUpgrades);
     setRound((currentRound) => currentRound + 1);
-    setRoundState(startNewRound(nextUpgrades));
-    setLastResolution(null);
+    const nextRound = startNewRound(nextUpgrades);
+    setRoundState(nextRound);
+    setCelebration(null);
     setScreen("game");
+
+    if (isBlackjack(nextRound.playerHand, hasUpgrade(nextUpgrades, "lucky-7"))) {
+      setCelebration("Blackjack!");
+      window.setTimeout(() => {
+        finishNaturalBlackjack(nextRound, nextUpgrades, hearts, score);
+      }, 800);
+    }
+  }
+
+  function finishNaturalBlackjack(
+    state: RoundState,
+    activeUpgrades = upgrades,
+    currentHearts = hearts,
+    currentScore = score,
+  ) {
+    const dealerResult = drawForDealer(state.deck, state.dealerHand, activeUpgrades);
+    const resolution = resolveRound(
+      state.playerHand,
+      dealerResult.dealerHand,
+      activeUpgrades,
+      null,
+      false,
+      {
+        currentHearts,
+        maxHearts: startingHearts,
+        forcePlayerWin: true,
+      },
+    );
+    const nextScore = currentScore + resolution.scoreAwarded;
+
+    setRoundState({
+      ...state,
+      deck: dealerResult.deck,
+      dealerHand: dealerResult.dealerHand,
+      stood: true,
+      resolved: true,
+    });
+    setScore(nextScore);
+    setBestScore((best) => Math.max(best, nextScore));
+    setRoundsSurvived((survived) => survived + 1);
+
+    window.setTimeout(() => {
+      setUpgradeChoices(getRandomUpgradeChoices(activeUpgrades));
+      setCelebration(null);
+      setScreen("upgrade");
+    }, 900);
   }
 
   async function shareResult() {
@@ -552,6 +584,16 @@ export default function Home() {
 
   return (
     <main className="table-felt min-h-dvh px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+      {celebration ? (
+        <div className="pointer-events-none fixed inset-x-4 top-1/3 z-50 mx-auto max-w-sm rounded-[1.5rem] border border-amber-200/25 bg-black/85 px-5 py-6 text-center shadow-glow backdrop-blur">
+          <div className="text-xs font-black uppercase tracking-[0.28em] text-red-300">
+            Congrats
+          </div>
+          <div className="mt-2 text-5xl font-black text-amber-200">
+            {celebration}
+          </div>
+        </div>
+      ) : null}
       <div className="mx-auto grid w-full max-w-md gap-4">
         <GameHUD
           hearts={hearts}
@@ -561,21 +603,6 @@ export default function Home() {
           bestScore={bestScore}
           upgrades={upgrades}
         />
-
-        <div className="game-panel mt-1 flex items-center justify-between rounded-[1.25rem] p-3 text-sm font-bold text-amber-50/80">
-          <span>
-            {lastResolution?.note ??
-              (roundState.doubleGhostActive
-                ? "Double Ghost is live. Win big or bleed harder."
-                : hearts < 2
-                  ? "Low on hearts. Double Down and Split are locked."
-                : canDoubleDown
-                  ? "Double Down is open: one card, no retreat, double risk."
-                  : canSplit
-                    ? "Split is open: same value, two hands, one dealer."
-                    : "Watch the count. Trust nothing.")}
-          </span>
-        </div>
 
         {hasUpgrade(upgrades, "peek") && roundState.deck[0] ? (
           <section className="game-panel flex items-center justify-between rounded-[1.25rem] p-3">
@@ -644,24 +671,6 @@ export default function Home() {
             onBurn={burnCard}
           />
         </div>
-
-        {upgrades.length > 0 ? (
-          <section className="game-panel rounded-[1.25rem] p-3">
-            <h2 className="text-xs font-black uppercase tracking-[0.16em] text-amber-100/70">
-              Upgrades
-            </h2>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {upgrades.map((upgrade) => (
-                <span
-                  key={upgrade}
-                  className="rounded-full bg-white/10 px-3 py-1 text-xs font-black text-white"
-                >
-                  {upgrade}
-                </span>
-              ))}
-            </div>
-          </section>
-        ) : null}
       </div>
     </main>
   );

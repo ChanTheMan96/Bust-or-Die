@@ -145,7 +145,14 @@ export function calculateBestHandValue(
 }
 
 export function isBlackjack(hand: PlayingCard[], luckySeven = false): boolean {
-  return hand.length === 2 && calculateBestHandValue(hand, luckySeven).best === 21;
+  if (hand.length !== 2) {
+    return false;
+  }
+
+  const hasAce = hand.some((card) => card.rank === "A");
+  const hasTenValue = hand.some((card) => ["10", "J", "Q", "K"].includes(card.rank));
+
+  return hasAce && hasTenValue && calculateBestHandValue(hand, luckySeven).best === 21;
 }
 
 export function suitSymbol(suit: Suit): string {
